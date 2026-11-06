@@ -11,6 +11,25 @@ const USERS_STORAGE_KEY = 'foodbridge_users_v3';
 const DONATIONS_STORAGE_KEY = 'foodbridge_donations_v3';
 const NOTIFICATIONS_STORAGE_KEY = 'foodbridge_notifications_v3';
 const SESSION_STORAGE_KEY = 'foodbridge_session_v3';
+const TOKEN_STORAGE_KEY = 'foodbridge_jwt_token_v3';
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const currentRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (currentRaw) {
+    try {
+      const u = JSON.parse(currentRaw);
+      if (u?.id) headers['x-user-id'] = u.id;
+    } catch {}
+  }
+  return headers;
+}
 
 // Initial pre-seeded users with accurate geographic coordinates
 const INITIAL_USERS: UserProfile[] = [
@@ -312,11 +331,63 @@ export const foodbridgeService = {
     }
   },
 
+  async checkDatabaseHealth(): Promise<{
+    connected: boolean;
+    configured: boolean;
+    host?: string;
+    name?: string;
+    serverTime?: string;
+    version?: string;
+    latencyMs?: number;
+    tables?: string[];
+    counts?: Record<string, number>;
+    error?: string;
+  }> {
+    try {
+      const res = await fetch('/api/health');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.database || { connected: false, configured: false };
+    } catch (err: any) {
+      return {
+        connected: false,
+        configured: false,
+        error: err.message || 'Backend server unreachable',
+      };
+    }
+  },
+
   async login(
     email: string,
     role: UserRole
   ): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
-    // If Supabase is configured, authenticate via Supabase Auth / profiles
+    // 1. First try the real backend PostgreSQL API
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) {
+          localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+        }
+        if (data.user) {
+          this.setCurrentSession(data.user);
+          return { success: true, user: data.user };
+        }
+      } else if (res.status === 403 || res.status === 404 || res.status === 401) {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.error && !errData.error.includes('DATABASE_URL')) {
+          return { success: false, error: errData.error };
+        }
+      }
+    } catch {
+      // Backend not yet running or network error, proceed to fallback
+    }
+
+    // 2. If Supabase is configured, authenticate via Supabase Auth / profiles
     if (isSupabaseConfigured && supabase) {
       try {
         const { data: profileData, error: profileErr } = await supabase
@@ -355,7 +426,7 @@ export const foodbridgeService = {
       }
     }
 
-    // Local / Demo Authentication
+    // 3. Local / Demo Authentication
     const users = getStoredUsers();
     const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
 
@@ -389,6 +460,38 @@ export const foodbridgeService = {
     latitude?: number;
     longitude?: number;
   }): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
+    // 1. Try real backend PostgreSQL API
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...params,
+          password: 'foodbridge123',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+        if (data.user) {
+          const users = getStoredUsers();
+          if (!users.some((u) => u.id === data.user.id)) {
+            users.push(data.user);
+            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+          }
+          this.setCurrentSession(data.user);
+          return { success: true, user: data.user };
+        }
+      } else if (res.status === 409 || res.status === 400) {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.error && !errData.error.includes('DATABASE_URL')) {
+          return { success: false, error: errData.error };
+        }
+      }
+    } catch {
+      // Backend not running, proceed to local/Supabase
+    }
+
     const users = getStoredUsers();
     if (users.some((u) => u.email.toLowerCase() === params.email.toLowerCase())) {
       return {
@@ -446,6 +549,15 @@ export const foodbridgeService = {
     userId: string,
     updates: Partial<UserProfile>
   ): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
+    // Try backend
+    try {
+      await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updates),
+      });
+    } catch {}
+
     const users = getStoredUsers();
     const index = users.findIndex((u) => u.id === userId);
 
@@ -490,10 +602,24 @@ export const foodbridgeService = {
 
   logout() {
     this.setCurrentSession(null);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
   },
 
   // ---------------- DONATIONS & WORKFLOW ----------------
   async getDonations(): Promise<DonationRecord[]> {
+    // 1. Try real PostgreSQL Backend API first
+    try {
+      const res = await fetch('/api/donations');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          saveStoredDonations(data);
+          return data;
+        }
+      }
+    } catch {
+      // Backend unreachable, fallback
+    }
     if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
@@ -564,6 +690,31 @@ export const foodbridgeService = {
       };
     }
 
+    // 1. Try real PostgreSQL Backend API first
+    try {
+      const res = await fetch('/api/donations', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(params),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.donation) {
+          const donations = getStoredDonations();
+          donations.unshift(data.donation);
+          saveStoredDonations(donations);
+          return { success: true, donation: data.donation };
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.error && !errData.error.includes('DATABASE_URL')) {
+          return { success: false, error: errData.error };
+        }
+      }
+    } catch {
+      // Backend not running, proceed to fallback
+    }
+
     const newDonation: DonationRecord = {
       id: `FB-${Math.floor(1000 + Math.random() * 9000)}`,
       donorId: params.donor.id,
@@ -617,6 +768,30 @@ export const foodbridgeService = {
     donationId: string,
     ngo: UserProfile
   ): Promise<{ success: boolean; error?: string }> {
+    // 1. Try real PostgreSQL Backend API first
+    try {
+      const res = await fetch(`/api/donations/${donationId}/accept-ngo`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.donation) {
+          const donations = getStoredDonations();
+          const idx = donations.findIndex((d) => d.id === donationId);
+          if (idx !== -1) donations[idx] = data.donation;
+          else donations.unshift(data.donation);
+          saveStoredDonations(donations);
+        }
+        return { success: true };
+      } else if (res.status === 409) {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.error || 'This donation has already been accepted by another NGO.' };
+      }
+    } catch {
+      // Backend not running, proceed to fallback
+    }
+
     const donations = getStoredDonations();
     const target = donations.find((d) => d.id === donationId);
 
@@ -678,6 +853,30 @@ export const foodbridgeService = {
     donationId: string,
     volunteer: UserProfile
   ): Promise<{ success: boolean; error?: string }> {
+    // 1. Try real PostgreSQL Backend API first
+    try {
+      const res = await fetch(`/api/donations/${donationId}/assign-volunteer`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.donation) {
+          const donations = getStoredDonations();
+          const idx = donations.findIndex((d) => d.id === donationId);
+          if (idx !== -1) donations[idx] = data.donation;
+          else donations.unshift(data.donation);
+          saveStoredDonations(donations);
+        }
+        return { success: true };
+      } else if (res.status === 409) {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.error || 'This pickup task has already been accepted.' };
+      }
+    } catch {
+      // Backend not running, proceed to fallback
+    }
+
     const donations = getStoredDonations();
     const target = donations.find((d) => d.id === donationId);
 
@@ -737,6 +936,24 @@ export const foodbridgeService = {
     donationId: string,
     volunteer: UserProfile
   ): Promise<{ success: boolean; error?: string }> {
+    // 1. Try real PostgreSQL Backend API first
+    try {
+      const res = await fetch(`/api/donations/${donationId}/pickup`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.donation) {
+          const donations = getStoredDonations();
+          const idx = donations.findIndex((d) => d.id === donationId);
+          if (idx !== -1) donations[idx] = data.donation;
+          saveStoredDonations(donations);
+        }
+        return { success: true };
+      }
+    } catch {}
+
     const donations = getStoredDonations();
     const target = donations.find((d) => d.id === donationId);
 
@@ -785,6 +1002,25 @@ export const foodbridgeService = {
     volunteer: UserProfile,
     remarks?: string
   ): Promise<{ success: boolean; error?: string }> {
+    // 1. Try real PostgreSQL Backend API first
+    try {
+      const res = await fetch(`/api/donations/${donationId}/deliver`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ remarks }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.donation) {
+          const donations = getStoredDonations();
+          const idx = donations.findIndex((d) => d.id === donationId);
+          if (idx !== -1) donations[idx] = data.donation;
+          saveStoredDonations(donations);
+        }
+        return { success: true };
+      }
+    } catch {}
+
     const donations = getStoredDonations();
     const target = donations.find((d) => d.id === donationId);
 
@@ -832,6 +1068,24 @@ export const foodbridgeService = {
     donationId: string,
     ngo: UserProfile
   ): Promise<{ success: boolean; error?: string }> {
+    // 1. Try real PostgreSQL Backend API first
+    try {
+      const res = await fetch(`/api/donations/${donationId}/confirm-receipt`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.donation) {
+          const donations = getStoredDonations();
+          const idx = donations.findIndex((d) => d.id === donationId);
+          if (idx !== -1) donations[idx] = data.donation;
+          saveStoredDonations(donations);
+        }
+        return { success: true };
+      }
+    } catch {}
+
     const donations = getStoredDonations();
     const target = donations.find((d) => d.id === donationId);
 
@@ -909,11 +1163,32 @@ export const foodbridgeService = {
 
   // ---------------- NOTIFICATIONS ----------------
   async getNotifications(userId: string): Promise<NotificationItem[]> {
+    // 1. Try real PostgreSQL Backend API first
+    try {
+      const res = await fetch('/api/notifications', {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.notifications) && data.notifications.length > 0) {
+          saveStoredNotifications(data.notifications);
+          return data.notifications;
+        }
+      }
+    } catch {}
+
     const notifs = getStoredNotifications();
     return notifs.filter((n) => n.userId === userId);
   },
 
   async markNotificationAsRead(notifId: string): Promise<void> {
+    try {
+      await fetch(`/api/notifications/${notifId}/read`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+    } catch {}
+
     const notifs = getStoredNotifications();
     const target = notifs.find((n) => n.id === notifId);
     if (target) {
