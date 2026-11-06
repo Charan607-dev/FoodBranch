@@ -1,0 +1,6 @@
+{
+  "name": "FoodBridge – Turning Surplus Food Into Hope",
+  "description": "Connecting surplus food from restaurants, businesses, and individuals with verified NGOs and communities in need.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

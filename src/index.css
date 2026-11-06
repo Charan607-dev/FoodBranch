@@ -1,0 +1,155 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-forest: #123D2B;
+  --color-forest-dark: #0B261B;
+  --color-forest-light: #1A543C;
+  --color-forest-surface: #174834;
+  --color-fresh: #3C8D58;
+  --color-fresh-hover: #337A4C;
+  --color-cream: #F8F5EB;
+  --color-cream-light: #FDFBF7;
+  --color-cream-dark: #EAE4D3;
+  --color-orange-warm: #F4A259;
+  --color-orange-hover: #E89143;
+  --color-charcoal: #202820;
+  --color-charcoal-muted: #536253;
+  --color-charcoal-light: #7A8B7A;
+  --color-charcoal-dark: #0E1611;
+  --color-charcoal-surface: #17231B;
+  --color-charcoal-card: #1D2C22;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-cream);
+  color: var(--color-charcoal);
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.dark body {
+  background-color: #0E1611;
+  color: #F4F6F4;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+/* Custom subtle noise texture or organic glow effects */
+.bg-grain {
+  background-image: radial-gradient(rgba(18, 61, 43, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Custom FoodBridge Leaflet Map Styling */
+.foodbridge-map-container {
+  isolation: isolate;
+}
+
+.foodbridge-map-container .leaflet-pane {
+  z-index: 10 !important;
+}
+
+.foodbridge-map-container .leaflet-top,
+.foodbridge-map-container .leaflet-bottom {
+  z-index: 20 !important;
+}
+
+.foodbridge-map-container .leaflet-popup {
+  margin-bottom: 24px;
+}
+
+.foodbridge-map-container .leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
+}
+
+.foodbridge-map-container .leaflet-popup-content {
+  margin: 0 !important;
+  line-height: inherit !important;
+}
+
+.foodbridge-map-container .leaflet-popup-tip-container {
+  display: none !important;
+}
+
+.foodbridge-map-container .leaflet-popup-close-button {
+  display: none !important;
+}
+
+/* Custom map pin pulse animation */
+@keyframes pinPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(60, 141, 88, 0.6);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 12px rgba(60, 141, 88, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(60, 141, 88, 0);
+  }
+}
+
+.pulse-marker {
+  animation: pinPulse 2s infinite cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+/* Leaflet Zoom control styling */
+.foodbridge-map-container .leaflet-bar {
+  border: 1px solid rgba(18, 61, 43, 0.15) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+}
+
+.foodbridge-map-container .leaflet-bar a {
+  background-color: #F8F5EB !important;
+  color: #123D2B !important;
+  border-bottom: 1px solid rgba(18, 61, 43, 0.1) !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  transition: all 0.15s ease !important;
+}
+
+.foodbridge-map-container .leaflet-bar a:hover {
+  background-color: #3C8D58 !important;
+  color: #FFFFFF !important;
+}
+
+html.dark .foodbridge-map-container .leaflet-bar {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark .foodbridge-map-container .leaflet-bar a {
+  background-color: #142318 !important;
+  color: #F4F6F4 !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark .foodbridge-map-container .leaflet-bar a:hover {
+  background-color: #4EBE73 !important;
+  color: #0E1611 !important;
+}
+
+/* Dark mode tiles filter for pleasant high contrast night viewing */
+html.dark .dark-map-tiles .leaflet-tile-pane {
+  filter: brightness(0.65) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
