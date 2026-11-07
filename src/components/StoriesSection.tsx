@@ -13,7 +13,7 @@ export const StoriesSection: React.FC = () => {
       role: 'Head Chef & Co-owner',
       organization: 'The Curry House',
       attribution: 'Restaurant Partner',
-      image: '/src/assets/images/volunteer_chef_portrait_1793953125658.jpg',
+      image: volunteerImage,
       icon: Building,
       accent: 'text-[#3C8D58] dark:text-[#4EBE73]',
       highlight: 'Over 1,800 meals donated since joining',
