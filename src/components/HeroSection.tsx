@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, Heart, Clock, CheckCircle2 } from 'lucide-react';
+import heroImage from '../assets/images/hero_food_donation_boxes_1793953124158.jpg';
 
 interface HeroSectionProps {
   onOpenDonate: () => void;
@@ -110,11 +111,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               {/* Primary Visual: Packing fresh donation boxes */}
               <div className="relative rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.18)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.5)] border-4 border-white dark:border-[#1E2D22] aspect-[4/3] bg-neutral-200 dark:bg-neutral-800">
                 <img
-                  src="/src/assets/images/hero_food_donation_boxes_1793953124158.jpg"
-                  alt="FoodBridge volunteers carefully packing fresh surplus meals into donation boxes"
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                  referrerPolicy="no-referrer"
-                />
+  src={heroImage}
+  alt="FoodBridge volunteers carefully packing fresh surplus meals into donation boxes"
+  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+/>
                 {/* Subtle gradient scrim */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#123D2B]/60 via-transparent to-transparent pointer-events-none" />
 
