@@ -19,6 +19,7 @@ import { DonationModal } from './components/modals/DonationModal';
 import { VolunteerModal } from './components/modals/VolunteerModal';
 import { PartnershipModal } from './components/modals/PartnershipModal';
 import { AuthModal } from './components/modals/AuthModal';
+import { DatabaseStatusModal } from './components/modals/DatabaseStatusModal';
 import { RoleSelectScreen } from './components/auth/RoleSelectScreen';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { DonorDashboard } from './components/dashboard/DonorDashboard';
@@ -39,6 +40,7 @@ import { HeartHandshake, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 
 export default function App() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     return foodbridgeService.getCurrentSession();
   });
@@ -388,6 +390,7 @@ export default function App() {
         onLogout={handleLogout}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode((prev) => !prev)}
+        onOpenDbStatus={() => setIsDbModalOpen(true)}
       />
 
       {/* Main Content Sections */}
@@ -505,6 +508,7 @@ export default function App() {
           setSelectedRole('ngo');
           navigateTo('auth', 'ngo');
         }}
+        onOpenDbStatus={() => setIsDbModalOpen(true)}
       />
 
       {/* Floating Fast Action Donate Button (Appears on scroll) */}
@@ -555,6 +559,11 @@ export default function App() {
             showToast(`Signed in as ${session.name || 'Member'}`);
           }
         }}
+      />
+
+      <DatabaseStatusModal
+        isOpen={isDbModalOpen}
+        onClose={() => setIsDbModalOpen(false)}
       />
     </div>
   );

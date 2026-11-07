@@ -13,6 +13,27 @@ const NOTIFICATIONS_STORAGE_KEY = 'foodbridge_notifications_v3';
 const SESSION_STORAGE_KEY = 'foodbridge_session_v3';
 const TOKEN_STORAGE_KEY = 'foodbridge_jwt_token_v3';
 
+export function getApiBaseUrl(): string {
+  // 1. Runtime window property
+  if (typeof window !== 'undefined' && (window as any).__FOODBRIDGE_API_URL) {
+    return (window as any).__FOODBRIDGE_API_URL.replace(/\/$/, '');
+  }
+  // 2. Custom override from Database Status Modal
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('foodbridge_custom_api_url');
+    if (custom && custom.trim().startsWith('http')) {
+      return custom.trim().replace(/\/$/, '');
+    }
+  }
+  // 3. Build-time environment variable VITE_API_URL or VITE_BACKEND_URL
+  const envUrl = (import.meta as any).env?.VITE_API_URL || (import.meta as any).env?.VITE_BACKEND_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim().startsWith('http')) {
+    return envUrl.trim().replace(/\/$/, '');
+  }
+  // 4. Default to relative root (same domain full-stack deployment)
+  return '';
+}
+
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   const currentRaw = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -344,7 +365,7 @@ export const foodbridgeService = {
     error?: string;
   }> {
     try {
-      const res = await fetch('/api/health');
+      const res = await fetch(`${getApiBaseUrl()}/api/health`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       return data.database || { connected: false, configured: false };
@@ -363,7 +384,7 @@ export const foodbridgeService = {
   ): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
     // 1. First try the real backend PostgreSQL API
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, role }),
@@ -462,7 +483,7 @@ export const foodbridgeService = {
   }): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
     // 1. Try real backend PostgreSQL API
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${getApiBaseUrl()}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -609,10 +630,10 @@ export const foodbridgeService = {
   async getDonations(): Promise<DonationRecord[]> {
     // 1. Try real PostgreSQL Backend API first
     try {
-      const res = await fetch('/api/donations');
+      const res = await fetch(`${getApiBaseUrl()}/api/donations`);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           saveStoredDonations(data);
           return data;
         }
@@ -692,7 +713,7 @@ export const foodbridgeService = {
 
     // 1. Try real PostgreSQL Backend API first
     try {
-      const res = await fetch('/api/donations', {
+      const res = await fetch(`${getApiBaseUrl()}/api/donations`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(params),
@@ -707,12 +728,10 @@ export const foodbridgeService = {
         }
       } else {
         const errData = await res.json().catch(() => ({}));
-        if (errData.error && !errData.error.includes('DATABASE_URL')) {
-          return { success: false, error: errData.error };
-        }
+        return { success: false, error: errData.error || 'Failed to save donation on backend database.' };
       }
-    } catch {
-      // Backend not running, proceed to fallback
+    } catch (err: any) {
+      console.warn('Backend donation creation error:', err);
     }
 
     const newDonation: DonationRecord = {
@@ -770,7 +789,7 @@ export const foodbridgeService = {
   ): Promise<{ success: boolean; error?: string }> {
     // 1. Try real PostgreSQL Backend API first
     try {
-      const res = await fetch(`/api/donations/${donationId}/accept-ngo`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/donations/${donationId}/accept-ngo`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });
@@ -784,7 +803,7 @@ export const foodbridgeService = {
           saveStoredDonations(donations);
         }
         return { success: true };
-      } else if (res.status === 409) {
+      } else {
         const errData = await res.json().catch(() => ({}));
         return { success: false, error: errData.error || 'This donation has already been accepted by another NGO.' };
       }
@@ -855,7 +874,7 @@ export const foodbridgeService = {
   ): Promise<{ success: boolean; error?: string }> {
     // 1. Try real PostgreSQL Backend API first
     try {
-      const res = await fetch(`/api/donations/${donationId}/assign-volunteer`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/donations/${donationId}/assign-volunteer`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });
@@ -869,7 +888,7 @@ export const foodbridgeService = {
           saveStoredDonations(donations);
         }
         return { success: true };
-      } else if (res.status === 409) {
+      } else {
         const errData = await res.json().catch(() => ({}));
         return { success: false, error: errData.error || 'This pickup task has already been accepted.' };
       }
@@ -938,7 +957,7 @@ export const foodbridgeService = {
   ): Promise<{ success: boolean; error?: string }> {
     // 1. Try real PostgreSQL Backend API first
     try {
-      const res = await fetch(`/api/donations/${donationId}/pickup`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/donations/${donationId}/pickup`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });
@@ -1004,7 +1023,7 @@ export const foodbridgeService = {
   ): Promise<{ success: boolean; error?: string }> {
     // 1. Try real PostgreSQL Backend API first
     try {
-      const res = await fetch(`/api/donations/${donationId}/deliver`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/donations/${donationId}/deliver`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ remarks }),
@@ -1070,7 +1089,7 @@ export const foodbridgeService = {
   ): Promise<{ success: boolean; error?: string }> {
     // 1. Try real PostgreSQL Backend API first
     try {
-      const res = await fetch(`/api/donations/${donationId}/confirm-receipt`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/donations/${donationId}/confirm-receipt`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });
@@ -1165,12 +1184,12 @@ export const foodbridgeService = {
   async getNotifications(userId: string): Promise<NotificationItem[]> {
     // 1. Try real PostgreSQL Backend API first
     try {
-      const res = await fetch('/api/notifications', {
+      const res = await fetch(`${getApiBaseUrl()}/api/notifications`, {
         headers: getAuthHeaders(),
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data.notifications) && data.notifications.length > 0) {
+        if (Array.isArray(data.notifications)) {
           saveStoredNotifications(data.notifications);
           return data.notifications;
         }
@@ -1183,7 +1202,7 @@ export const foodbridgeService = {
 
   async markNotificationAsRead(notifId: string): Promise<void> {
     try {
-      await fetch(`/api/notifications/${notifId}/read`, {
+      await fetch(`${getApiBaseUrl()}/api/notifications/${notifId}/read`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });

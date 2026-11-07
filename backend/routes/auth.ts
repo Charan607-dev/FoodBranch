@@ -141,6 +141,71 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     );
 
     if (userRes.rows.length === 0) {
+      // Auto-provision standard demo accounts on first login if not yet in database
+      const demoUsers: Record<string, { id: string; name: string; phone: string; role: 'donor' | 'ngo' | 'volunteer'; org: string; address: string; city: string; lat: number; lng: number }> = {
+        'priya@curryhouse.com': {
+          id: 'donor-priya-01',
+          name: 'Chef Priya Sharma',
+          phone: '+91 98450 12345',
+          role: 'donor',
+          org: 'The Curry House Restaurant',
+          address: '100ft Road, Indiranagar, Bengaluru',
+          city: 'Bengaluru',
+          lat: 12.9784,
+          lng: 77.6408,
+        },
+        'rajesh@hopefoundation.org': {
+          id: 'ngo-rajesh-01',
+          name: 'Rajesh Nair',
+          phone: '+91 98860 67890',
+          role: 'ngo',
+          org: 'Hope Community Care Foundation',
+          address: 'Austin Town, Near Community Center, Bengaluru',
+          city: 'Bengaluru',
+          lat: 12.9620,
+          lng: 77.6145,
+        },
+        'vikram.rao@volunteer.org': {
+          id: 'volunteer-vikram-01',
+          name: 'Vikram Rao',
+          phone: '+91 97410 54321',
+          role: 'volunteer',
+          org: 'FoodBridge City Volunteer Corps',
+          address: 'Koramangala 4th Block, Bengaluru',
+          city: 'Bengaluru',
+          lat: 12.9345,
+          lng: 77.6265,
+        },
+      };
+
+      const demo = demoUsers[email.toLowerCase()];
+      if (demo && demo.role === role) {
+        const defaultHash = '$2a$10$rDkLzG1Lp/eK.a/xK8XgK.472w5n8B0F.X6B608n7q4tGv3Y2zDuy';
+        await query(
+          `INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`,
+          [demo.id, email.toLowerCase(), defaultHash, demo.role]
+        );
+        await query(
+          `INSERT INTO profiles (id, full_name, email, phone, role, organization_name, address, city, latitude, longitude, share_location)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (id) DO NOTHING`,
+          [demo.id, demo.name, email.toLowerCase(), demo.phone, demo.role, demo.org, demo.address, demo.city, demo.lat, demo.lng, demo.role === 'volunteer']
+        );
+        const recheck = await query(
+          `SELECT u.id, u.email, u.password_hash, u.role,
+                  p.full_name, p.phone, p.organization_name, p.address, p.city,
+                  p.latitude, p.longitude, p.share_location, p.created_at
+           FROM users u
+           LEFT JOIN profiles p ON u.id = p.id
+           WHERE LOWER(u.email) = LOWER($1)`,
+          [email]
+        );
+        if (recheck.rows.length > 0) {
+          userRes.rows.push(recheck.rows[0]);
+        }
+      }
+    }
+
+    if (userRes.rows.length === 0) {
       res.status(404).json({
         error: `No account found for "${email}". Please register to continue.`,
       });

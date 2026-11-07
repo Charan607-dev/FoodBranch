@@ -134,10 +134,32 @@ router.post(
       }
 
       // Fetch donor profile info
-      const donorRes = await query(
+      let donorRes = await query(
         `SELECT full_name, phone, organization_name FROM profiles WHERE id = $1`,
         [req.user!.id]
       );
+      if (donorRes.rows.length === 0) {
+        // Ensure profile exists in database to prevent foreign key violation
+        await query(
+          `INSERT INTO profiles (id, full_name, email, phone, role, organization_name, address, city, latitude, longitude)
+           VALUES ($1, $2, $3, $4, 'donor', $5, $6, 'Bengaluru', $7, $8)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            req.user!.id,
+            req.user!.fullName || 'Food Donor',
+            req.user!.email,
+            contactNumber || '',
+            req.user!.organizationName || '',
+            pickupAddress,
+            pickupLatitude,
+            pickupLongitude,
+          ]
+        );
+        donorRes = await query(
+          `SELECT full_name, phone, organization_name FROM profiles WHERE id = $1`,
+          [req.user!.id]
+        );
+      }
       const donorProfile = donorRes.rows[0] || {};
       const donorName = donorProfile.full_name || req.user!.fullName || 'Food Donor';
       const donorPhone = contactNumber || donorProfile.phone || '';
@@ -215,10 +237,22 @@ router.post(
       const { id } = req.params;
 
       // Fetch NGO profile
-      const ngoRes = await query(
+      let ngoRes = await query(
         `SELECT organization_name, full_name, address, latitude, longitude FROM profiles WHERE id = $1`,
         [req.user!.id]
       );
+      if (ngoRes.rows.length === 0) {
+        await query(
+          `INSERT INTO profiles (id, full_name, email, role, organization_name, address, city, latitude, longitude)
+           VALUES ($1, $2, $3, 'ngo', $4, 'Austin Town, Near Community Center, Bengaluru', 'Bengaluru', 12.9620, 77.6145)
+           ON CONFLICT (id) DO NOTHING`,
+          [req.user!.id, req.user!.fullName || 'NGO Partner', req.user!.email, req.user!.organizationName || 'Hope Community Care Foundation']
+        );
+        ngoRes = await query(
+          `SELECT organization_name, full_name, address, latitude, longitude FROM profiles WHERE id = $1`,
+          [req.user!.id]
+        );
+      }
       const ngoProfile = ngoRes.rows[0] || {};
       const ngoName = ngoProfile.organization_name || ngoProfile.full_name || 'Community NGO';
       const ngoAddress = ngoProfile.address || 'Central Community Hub';
@@ -300,10 +334,22 @@ router.post(
       const { id } = req.params;
 
       // Fetch Volunteer profile
-      const volRes = await query(
+      let volRes = await query(
         `SELECT full_name, phone, latitude, longitude, share_location FROM profiles WHERE id = $1`,
         [req.user!.id]
       );
+      if (volRes.rows.length === 0) {
+        await query(
+          `INSERT INTO profiles (id, full_name, email, role, address, city, latitude, longitude, share_location)
+           VALUES ($1, $2, $3, 'volunteer', 'Koramangala 4th Block, Bengaluru', 'Bengaluru', 12.9345, 77.6265, true)
+           ON CONFLICT (id) DO NOTHING`,
+          [req.user!.id, req.user!.fullName || 'Volunteer Courier', req.user!.email]
+        );
+        volRes = await query(
+          `SELECT full_name, phone, latitude, longitude, share_location FROM profiles WHERE id = $1`,
+          [req.user!.id]
+        );
+      }
       const volProfile = volRes.rows[0] || {};
       const volName = volProfile.full_name || req.user!.fullName || 'Volunteer Courier';
       const volPhone = volProfile.phone || '';

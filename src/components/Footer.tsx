@@ -5,12 +5,14 @@ interface FooterProps {
   onOpenDonate: () => void;
   onOpenVolunteer: () => void;
   onOpenPartner: () => void;
+  onOpenDbStatus?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenDonate,
   onOpenVolunteer,
   onOpenPartner,
+  onOpenDbStatus,
 }) => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -207,7 +209,17 @@ export const Footer: React.FC<FooterProps> = ({
           <div>
             © 2026 FoodBridge. Together, We Make Every Meal Matter.
           </div>
-          <div className="flex items-center gap-1.5 text-center sm:text-right">
+          <div className="flex flex-wrap items-center gap-3 text-center sm:text-right">
+            {onOpenDbStatus && (
+              <button
+                type="button"
+                onClick={onOpenDbStatus}
+                className="hover:text-[#F4A259] text-[#3C8D58] font-semibold underline underline-offset-4 cursor-pointer transition-colors"
+              >
+                PostgreSQL Architecture & Sync Status
+              </button>
+            )}
+            <span>•</span>
             <span>Designed for AI Prompt Battle · Interactive Social-Impact Prototype</span>
           </div>
         </div>

@@ -52,26 +52,23 @@ export async function authenticateToken(
     }
   }
 
-  // Support demo / session ID header for seamless development testing if configured
   const sessionUserId = req.headers['x-user-id'] as string;
   if (sessionUserId) {
     try {
-      if (config.databaseUrl) {
-        const resUser = await query(
-          `SELECT id, email, role, full_name, organization_name FROM profiles WHERE id = $1`,
-          [sessionUserId]
-        );
-        if (resUser.rows.length > 0) {
-          const row = resUser.rows[0];
-          req.user = {
-            id: row.id,
-            email: row.email,
-            role: row.role,
-            fullName: row.full_name,
-            organizationName: row.organization_name,
-          };
-          return next();
-        }
+      const resUser = await query(
+        `SELECT id, email, role, full_name, organization_name FROM profiles WHERE id = $1`,
+        [sessionUserId]
+      );
+      if (resUser.rows.length > 0) {
+        const row = resUser.rows[0];
+        req.user = {
+          id: row.id,
+          email: row.email,
+          role: row.role,
+          fullName: row.full_name,
+          organizationName: row.organization_name,
+        };
+        return next();
       }
     } catch {
       // Continue to next check
