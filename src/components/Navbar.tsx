@@ -120,18 +120,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Database & Sync Status Modal Trigger */}
-            {onOpenDbStatus && (
-              <button
-                type="button"
-                onClick={onOpenDbStatus}
-                aria-label="Database Status"
-                title="Database & Live Sync Architecture"
-                className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#123D2B]/5 hover:bg-[#123D2B]/10 dark:bg-white/10 dark:hover:bg-white/15 text-[#123D2B] dark:text-[#3C8D58] border border-[#123D2B]/10 dark:border-white/15 transition-all duration-200 cursor-pointer"
-              >
-                <Database className="w-5 h-5 text-[#3C8D58] dark:text-[#4EBE73]" />
-              </button>
-            )}
 
             {/* Login or User badge (desktop) */}
             <div className="hidden sm:flex items-center gap-3">
