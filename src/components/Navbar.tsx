@@ -246,18 +246,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              {onOpenDbStatus && (
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    onOpenDbStatus();
-                  }}
-                  className="w-full py-2 text-xs font-semibold text-[#123D2B] dark:text-[#F8F5EB]/80 bg-[#123D2B]/5 dark:bg-white/5 hover:bg-[#123D2B]/10 rounded-xl text-center flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Database className="w-3.5 h-3.5 text-[#3C8D58]" />
-                  <span>Database & Sync Architecture</span>
-                </button>
-              )}
+            
             </div>
           </nav>
         </div>
