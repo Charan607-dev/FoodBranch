@@ -1,5 +1,6 @@
 import React from 'react';
 import { Quote, Sparkles, Building, Heart, GraduationCap, Info } from 'lucide-react';
+import volunteerImage from '../assets/images/volunteer_chef_portrait_1793953125658.jpg';
 
 export const StoriesSection: React.FC = () => {
   const stories = [
