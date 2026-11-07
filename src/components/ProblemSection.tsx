@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Trash2, AlertCircle, Unlink, Utensils, HeartHandshake, Check, ArrowRight } from 'lucide-react';
+import surplusImage from '../assets/images/surplus_produce_harvest_1793953125286.jpg';
 
 export const ProblemSection: React.FC<{ onOpenDonate: () => void }> = ({ onOpenDonate }) => {
   const cards = [
@@ -110,11 +111,10 @@ export const ProblemSection: React.FC<{ onOpenDonate: () => void }> = ({ onOpenD
             {/* Left Image & Visual Evidence */}
             <div className="lg:col-span-5 relative rounded-2xl overflow-hidden aspect-[4/3] bg-neutral-100 dark:bg-neutral-800 shadow-md">
               <img
-                src="/src/assets/images/surplus_produce_harvest_1793953125286.jpg"
-                alt="Abundance of wholesome surplus bread, produce, and packaged meals ready for rescue"
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
+  src={surplusImage}
+  alt="Abundance of wholesome surplus bread, produce, and packaged meals ready for rescue"
+  className="w-full h-full object-cover"
+/>
               <div className="absolute top-3 left-3 bg-[#123D2B]/90 backdrop-blur-md text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/10">
                 Fresh & Edible Surplus
               </div>
