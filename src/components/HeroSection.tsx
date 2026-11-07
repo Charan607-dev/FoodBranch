@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, Heart, Clock, CheckCircle2 } from 'lucide-react';
 import heroImage from '../assets/images/hero_food_donation_boxes_1793953124158.jpg';
+import rescueImage from '../assets/images/food_rescue_community_delivery_1793953125208.jpg';
 
 interface HeroSectionProps {
   onOpenDonate: () => void;
@@ -127,12 +128,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
               {/* Secondary Inset Visual: Volunteer delivering meal package */}
               <div className="absolute -bottom-8 -left-6 sm:-left-10 w-44 sm:w-52 aspect-[16/10] rounded-2xl overflow-hidden border-3 border-white dark:border-[#1E2D22] shadow-[0_12px_30px_rgba(0,0,0,0.2)] bg-neutral-200 hidden xs:block">
-                <img
-                  src="/src/assets/images/food_rescue_community_delivery_1793953125208.jpg"
-                  alt="FoodBridge volunteer delivering fresh meal crate to community partner"
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
+               <img
+  src={rescueImage}
+  alt="FoodBridge volunteer delivering fresh meal crate to community partner"
+  className="w-full h-full object-cover"
+/>
               </div>
 
               {/* Floating Glassmorphism Card 1: Meals Shared Today */}
