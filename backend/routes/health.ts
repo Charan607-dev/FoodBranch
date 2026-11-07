@@ -36,11 +36,16 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     }
   }
 
+  const isConnected = Boolean(connResult.connected);
+  const dbStatus = isConnected ? 'connected' : 'disconnected';
+
   res.json({
-    status: connResult.connected ? 'healthy' : 'database_unreachable',
+    status: isConnected ? 'healthy' : 'degraded',
+    database_status: dbStatus,
     timestamp: new Date().toISOString(),
     database: {
-      connected: connResult.connected,
+      status: dbStatus,
+      connected: isConnected,
       configured: Boolean(config.databaseUrl),
       host: maskedHost,
       name: connResult.databaseName,
